@@ -1,0 +1,70 @@
+---
+- name: Create User
+  hosts: renueErmin
+  become: true
+
+  vars:
+    username: DevOps
+    ssh_public_key_path: ".ssh/id_rsa.pub"
+
+  handlers:
+    - name: Перезагрузить SSH
+      service:
+        name: sshd
+        state: restarted
+
+    - name: Перезапустить fail2ban
+      service:
+        name: fail2ban
+        state: restarted
+
+  tasks:
+    - name: Create user "{{ username }}" and give permisions
+      user:
+        name: "{{ username }}"
+        shell: /bin/bash
+        create_home: true
+        groups: sudo
+        append: true
+
+    - name: Создать .ssh директорию
+      file:
+        path: "/home/{{ username }}/.ssh"
+        state: directory
+        owner: "{{ username }}"
+        group: "{{ username }}"
+        mode: '0700'
+
+    - name: Скопировать SSH ключ
+      copy:
+        src: "{{ ssh_public_key_path }}"
+        dest: "/home/{{ username }}/.ssh/authorized_keys"
+        owner: "{{ username }}"
+        group: "{{ username }}"
+        mode: '0600'
+
+    - name: Отключить SSH вход по паролю
+      lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: '^#?PasswordAuthentication'
+        line: 'PasswordAuthentication no'
+      notify: Перезагрузить SSH
+
+    - name: Установить fail2ban (только на сервере А)
+      apt:
+        name: fail2ban
+        state: present
+      when: "inventory_hostname == 'hostA.renue'"
+
+    - name: Настроить fail2ban для блокировки на 1 час при 3 неудачных попытках
+      copy:
+        dest: /etc/fail2ban/jail.local
+        content: |
+          [sshd]
+          enabled = true
+          findtime = 60
+          maxretry = 3
+          bantime = 3600
+      notify: Перезапустить fail2ban
+      when: "inventory_hostname == 'hostA.renue'"
+

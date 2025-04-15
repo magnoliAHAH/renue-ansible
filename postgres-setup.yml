@@ -1,0 +1,91 @@
+---
+- name: postgresql Playbook
+  hosts: hostA.renue
+  become: true
+  vars:
+    databases:
+      - name: app
+        user: app
+        password: app
+        privs: "ALL"
+      - name: custom
+        user: custom
+        password: custom
+        privs: "ALL"
+    service_user:
+      - user: service
+        password: service
+        privs: pg_read_all_data
+  tasks:
+    - name: Update apt cache
+      ansible.builtin.apt:
+        update_cache: yes
+
+    - name: Download and run PostgreSQL installation script
+      ansible.builtin.shell: |
+        curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc | apt-key add -
+        sh -c 'echo "deb http://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list'
+        apt-get update
+        apt-get install -y postgresql-16
+      args:
+        executable: /bin/bash
+
+    - name: Ensure PostgreSQL is running and enabled
+      ansible.builtin.service:
+        name: postgresql
+        state: started
+        enabled: yes
+
+    - name: Utility present
+      ansible.builtin.package:
+        name:
+          - python3-psycopg2
+          - acl
+        state: present
+
+    - name: Create databases
+      become: true
+      become_user: postgres
+      loop: "{{ databases }}"
+      community.postgresql.postgresql_db:
+        state: present
+        name: "{{ item.name }}"
+
+    - name: Create users
+      become: true
+      become_user: postgres
+      loop: "{{ databases }}"
+      community.postgresql.postgresql_user:
+        state: present
+        name: "{{ item.user }}"
+        password: "{{ item.password }}"
+
+    - name: Grant privs
+      become: true
+      become_user: postgres
+      loop: "{{ databases }}"
+      community.postgresql.postgresql_privs:
+        state: present
+        db: "{{ item.name }}"
+        role: "{{ item.user }}"
+        privs: "{{ item.privs }}"
+        type: database
+
+    - name: Create read-only user
+      become: true
+      become_user: postgres
+      community.postgresql.postgresql_user:
+        state: present
+        name: "{{ service_user[0].user }}"
+        password: "{{ service_user[0].password }}"
+
+    - name: Grant read-only
+      become: true
+      become_user: postgres
+      loop: "{{ databases }}"
+      community.postgresql.postgresql_membership:
+        db: "{{item.name}}"
+        target_roles: "{{ service_user[0].user }}"
+        state: present
+        groups: pg_read_all_data
+

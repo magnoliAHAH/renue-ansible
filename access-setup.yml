@@ -1,0 +1,47 @@
+- name: Restrict PostgreSQL access to server B
+  hosts: hostA.renue
+  become: true
+  vars:
+    postgres_version: "16"
+  tasks:
+    - name: Allow access from server B only
+      community.postgresql.postgresql_pg_hba:
+        dest: "/etc/postgresql/{{ postgres_version }}/main/pg_hba.conf"
+        contype: host
+        users: all
+        source: "{{ hostvars['hostB.renue']['ansible_host'] }}/32"
+        databases: all
+        method: md5
+        state: present
+
+    - name: Deny access from other hosts
+      community.postgresql.postgresql_pg_hba:
+        dest: "/etc/postgresql/{{ postgres_version }}/main/pg_hba.conf"
+        contype: host
+        users: all
+        source: "0.0.0.0/0"
+        databases: all
+        method: reject
+        state: present
+
+    - name: Reload PostgreSQL
+      ansible.builtin.systemd:
+        name: postgresql
+
+- name: Restrict Nginx access from server A
+  hosts: hostB.renue
+  become: true
+  tasks:
+    - name: Add Nginx deny rule for server A
+      ansible.builtin.blockinfile:
+        path: "/etc/nginx/sites-available/default"
+        insertbefore: "location /"
+        block: |
+          if ($remote_addr = {{ hostvars['hostA.renue']['ansible_host'] }}) {
+            return 403;
+          }
+
+    - name: Reload Nginx
+      ansible.builtin.systemd:
+        name: nginx
+        state: reloaded
