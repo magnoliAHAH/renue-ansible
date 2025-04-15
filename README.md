@@ -3,23 +3,28 @@
 # Порядок выполнения
 Необходимо создать rsa ключи с именами (id_rsa id_rsa.pub) в .ssh
 
-### Первые 3 пункта задания  
+### Отключение авторизации по паролю через SSH на обоих серверах. Добавление пользователя DevOps и настройка sudo без пароля на обоих серверах. Настройка fail2ban на сервере А  
 ```bash
 ansible-playbook -i inventory.ini setup-ssh.yml
 ```
-### Весь 4 пункт  
+### Установка PosthgreSQL на сервере А  
+## Добавление пользователя app с паролем app с полным доступом к БД app  
+## Добавление пользователя custom с паролем custom с полным доступом к БД custom  
+## Добавление пользователя service с паролем service c паролем app с полным доступом на чтение к обоим БД  
 ```bash
 ansible-playbook -i inventory.ini postgres-setup.yml
 ```
-### 5 пункт задания  
+### Установка nginxна сервере Б и настроить его так, чтобы при обращении на
+сервере к localhost (или его доменному имени) открывался сайт https://renue.ru   
 ```bash
 ansible-playbook -i inventory.ini nginx-setup.yml
 ```
-### 6 пункт задания  
+### Настройка доступа к PostgreSQL на сервере А только с сервера Б, закрыть доступ к
+nginx на сервере Б с сервера А     
 ```bash
 ansible-playbook -i inventory.ini access-setup.yml
 ```
-### 7 пункт задания  
+### Настройка бэкапирования PostgreSQL с сервера А на сервер Б    
 ```bash
 ansible-playbook -i inventory.ini backup-setup.yml
 ```
