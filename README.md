@@ -8,9 +8,9 @@
 ansible-playbook -i inventory.ini setup-ssh.yml
 ```
 ### Установка PosthgreSQL на сервере А  
-## Добавление пользователя app с паролем app с полным доступом к БД app  
-## Добавление пользователя custom с паролем custom с полным доступом к БД custom  
-## Добавление пользователя service с паролем service c паролем app с полным доступом на чтение к обоим БД  
+#### Добавление пользователя app с паролем app с полным доступом к БД app  
+#### Добавление пользователя custom с паролем custom с полным доступом к БД custom  
+#### Добавление пользователя service с паролем service c паролем app с полным доступом на чтение к обоим БД  
 ```bash
 ansible-playbook -i inventory.ini postgres-setup.yml
 ```
